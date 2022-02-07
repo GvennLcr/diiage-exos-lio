@@ -1,86 +1,111 @@
-from flask import Flask, render_template, flash, request
-from database import *
+from flask import Flask, render_template, flash, redirect, request, session, url_for
 import sqlite3
 import hashlib
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'DIIIIIIIIIIIIIIIIIIIIIIIAGE'
+app.config['SECRET_KEY'] = 'GvennLcr_A01-2021'
+
+con = sqlite3.connect('database.db')
+c = con.cursor()
+
+c.execute('''CREATE TABLE users 
+            (id INTEGER PRIMARY KEY,
+            username TEXT,
+            password TEXT
+        )''')
+
+con.commit()
 
 @app.route("/", methods = ['GET', 'POST'])
 def index():
-    return render_template('index.html')
+    return render_template('index.html', username = session.get("USERNAME"))
 
-@app.route('/api/v1/login', methods=['GET', 'POST'])
-def login1():
+@app.route('/login', methods = ['GET', 'POST'])
+def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        msg      = ''
+        message  = ''
 
         with sqlite3.connect('database.db') as con:
             cur = con.cursor()
-            cur.execute("SELECT username, isadmin FROM users WHERE username = '{0}' AND password = '{1}'".format(username, hashlib.md5(password.encode('utf8')).hexdigest()))
+            cur.execute("SELECT username FROM users WHERE username = ? AND password = ?", (username, hashlib.sha256(password.encode('utf8')).hexdigest(),))
             response = cur.fetchone()
 
         if response is None:
-            msg = 'Incorrect Username/Password'
-            flash(msg)
+            message = 'Incorrect Username/Password'
+            flash(message)
 
-            return render_template('login.html', msg=msg)
+            return render_template('login.html', message = message)
         else:
-            flag=''
+            session['USERNAME'] = username
 
-            if response[1] == 1:
-                flag="ok"
-                return render_template('inbox.html', username=username, flag=flag)
-            else:
-                flag="There is no mail here, but you did get the correct password !"
-                return render_template('flag.html', username=username, flag=flag)
+            return render_template('index.html', username = session.get("USERNAME"))
 
     return render_template('login.html')
 
-@app.route('/api/v2/login', methods=['GET', 'POST'])
-def login2():
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session.pop('USERNAME', None)
+
+    return redirect(url_for('index'))
+
+@app.route('/signup', methods=['GET', 'POST'])
+def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        msg      = ''
+        confirm  = request.form['confirm']
+        message  = ''
 
         with sqlite3.connect('database.db') as con:
             cur = con.cursor()
-            cur.execute("SELECT username, isadmin FROM users WHERE username = ? AND password = ?", (username, hashlib.md5(password.encode('utf8')).hexdigest(),))
+            cur.execute("SELECT username FROM users WHERE username = ?", (username,))
             response = cur.fetchone()
 
-        if response is None:
-            msg = 'Incorrect Username/Password'
-            flash(msg)
+        if username == "":    
+            message = 'Please input something as an username !'
+            flash(message)
 
-            return render_template('login.html', msg=msg)
+            return render_template('signup.html', message = message)
         else:
-            flag=''
+            if response is not None:
+                message = 'User already registered !'
+                flash(message)
 
-            if response[1] == 1:
-                flag="ok"
-                return render_template('inbox.html', username=username, flag=flag)
+                return render_template('signup.html', message = message)
             else:
-                flag="There is no mail here, but you did get the correct password !"
-                return render_template('flag.html', username=username, flag=flag)
+                if password != confirm:
+                    message = 'Passwords do not match !'
+                    flash(message)
 
-    return render_template('login.html')
+                    return render_template('signup.html', message = message)
+                else:
+                    with sqlite3.connect('database.db') as con:
+                        cur = con.cursor()
+                        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashlib.sha256(password.encode('utf8')).hexdigest(),))
+                        con.commit()
 
-@app.route('/api/v1/admin', methods=['GET', 'POST'])
-def admin():
-    return render_template('admin.html')
+                    session['USERNAME'] = username
 
-@app.route("/api/v1/admin/debug", methods = ['GET', 'POST'])
-def debug():
-    with sqlite3.connect('database.db') as con:
-        cur = con.cursor()
-        cur.execute("SELECT * FROM users")
-        response = cur.fetchall()
+                    return render_template('index.html', username = session.get("USERNAME"))
 
-    return render_template("debug.html", response=response)
+    return render_template('signup.html')
+
+@app.route("/profile/<user>", methods = ['GET', 'POST'])
+def userProfile(user):
+    flag     = ''
+
+    if session.get("USERNAME") is None:
+        return redirect(url_for("login"))
+    else:
+        if user == 'admin':
+            flag = "TARTETATIN{b77ebadba0c90e8fd3b8a8b0d36ef7adb4458ebb}"
+        else:
+            flag = "There is no flag here, it is located on the admin profile !"
+
+        return render_template("profile.html", username = user, flag = flag)
 
 if  '__main__' == __name__:
     from waitress import serve
-    serve(app, host="0.0.0.0", port=80)
+    serve(app, host = "0.0.0.0", port = 80)

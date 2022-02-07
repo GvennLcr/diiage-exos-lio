@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+    <head>
+        <title>A01-2021 | Tartetat.in</title>
+        <meta charset="utf-8">
+        <meta name="author" content="GvennLcr">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bulma.css') }}">
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    </head>
+    <body>
+        <nav class="navbar has-shadow is-fixed-top" role="navigation" aria-label="main navigation">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="/">
+                    <h1><b class="has-text-info">FakeCo</b> FakeApp</h1>
+                </a>
+            </div>
+            <div id="navbarBasicExample" class="navbar-menu">
+                <div class="navbar-end">
+                    <div class="navbar-item">
+                        <div class="buttons">
+                            <a href="/" class="navbar-item">
+                                Home
+                            </a>
+                            <a href="/login" class="navbar-item">
+                                Login
+                            </a>
+                            <a href="/signup" class="navbar-item">
+                                Sign Up
+                            </a>
+                            <a href="/logout" class="navbar-item">
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <section class="hero is-link is-fullheight-with-navbar">
+            <div class="hero-body">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </section>
+    </body>
+</html>
